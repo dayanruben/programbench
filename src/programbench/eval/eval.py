@@ -569,7 +569,9 @@ class Evaluator:
         # network, ...): we just don't get --reruns and rely on
         # --max-worker-restart + branch_retries.
         rerun_install = self._run_step(
-            "pip3 install -q --disable-pip-version-check pytest-rerunfailures",
+            # Pinned: pytest-rerunfailures 16.6.1 (2026-09-03) started emitting a bare
+            # <testcase/> per rerun attempt in the JUnit XML, which parses as a pass.
+            "pip3 install -q --disable-pip-version-check pytest-rerunfailures==16.4",
             env=env,
             log_buf=log_buf,
             step_name="install_rerunfailures",
