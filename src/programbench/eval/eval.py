@@ -20,6 +20,7 @@ Do not remove this notice.
 """
 
 import logging
+import shlex
 import subprocess
 import tempfile
 import threading
@@ -41,6 +42,12 @@ from programbench.constants import (
     WORKSPACE_DIR,
 )
 from programbench.container import ContainerEnvironment, remove_image
+from programbench.eval.pytest_timeout_retry import (
+    PYTEST_TIMEOUT_RETRY_PLUGIN_DIR,
+    PYTEST_TIMEOUT_RETRY_PLUGIN_MODULE,
+    PYTEST_TIMEOUT_RETRY_PLUGIN_PATH,
+    PYTEST_TIMEOUT_RETRY_PLUGIN_SOURCE,
+)
 from programbench.exceptions import EmptyTestResultError, EvalStepError, XmlParseError
 from programbench.utils.internet_control import block_build_internet_dns, restore_build_internet_dns
 
@@ -661,11 +668,30 @@ class Evaluator:
             )
             run_cmd = "chmod +x ./eval/run.sh && ./eval/run.sh"
             if self._has_rerunfailures:
+                self._run_step(
+                    f"mkdir -p {shlex.quote(PYTEST_TIMEOUT_RETRY_PLUGIN_DIR)} "
+                    f"&& rm -f {shlex.quote(PYTEST_TIMEOUT_RETRY_PLUGIN_PATH)}",
+                    env=env,
+                    log_buf=log_buf,
+                    step_name="install_pytest_timeout_retry",
+                    timeout=10,
+                )
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as plugin:
+                    plugin.write(PYTEST_TIMEOUT_RETRY_PLUGIN_SOURCE)
+                    plugin.flush()
+                    env.copy_in(Path(plugin.name), PYTEST_TIMEOUT_RETRY_PLUGIN_PATH)
                 # Tighten flake recovery inside one run: pytest-rerunfailures
                 # retries individual failed tests up to 2x with a 1s delay.
                 # Augmenting at exec time (not container creation) lets us
                 # re-use the committed image for every branch.
-                run_cmd = 'export PYTEST_ADDOPTS="$PYTEST_ADDOPTS --reruns=2 --reruns-delay=1" && ' + run_cmd
+                run_cmd = (
+                    'export PROGRAMBENCH_PYTEST_ORIGINAL_PYTHONPATH="${PYTHONPATH-}" && '
+                    'export PROGRAMBENCH_PYTEST_ORIGINAL_ADDOPTS="${PYTEST_ADDOPTS-}" && '
+                    f'export PYTHONPATH="{PYTEST_TIMEOUT_RETRY_PLUGIN_DIR}'
+                    '${PYTHONPATH:+:$PYTHONPATH}" && '
+                    f'export PYTEST_ADDOPTS="${{PYTEST_ADDOPTS:-}} -p {PYTEST_TIMEOUT_RETRY_PLUGIN_MODULE} '
+                    '--reruns=2 --reruns-delay=1" && ' + run_cmd
+                )
             self._run_step(
                 run_cmd,
                 env=env,
