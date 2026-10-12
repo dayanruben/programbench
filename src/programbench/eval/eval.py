@@ -243,6 +243,22 @@ class EvaluationResult(BaseModel):
             warnings=self.warnings,
         )
 
+    def only_expected(self, expected_tests: set[str]) -> "EvaluationResult":
+        """Return a copy without tests missing from tests.json (e.g. ones the submission wrote itself)."""
+        if not expected_tests:
+            return self
+        return EvaluationResult(
+            test_results=[t for t in self.test_results if t.full_name in expected_tests],
+            error_code=self.error_code,
+            error_details=self.error_details,
+            log=self.log,
+            solution_branch=self.solution_branch,
+            test_branches=self.test_branches,
+            test_branch_errors=self.test_branch_errors,
+            executable_hash=self.executable_hash,
+            warnings=self.warnings,
+        )
+
     def for_branches(self, branches: list[str]) -> "EvaluationResult":
         """Return a copy scoped to the given test branches."""
         if sorted(self.test_branches) == sorted(branches):

@@ -154,6 +154,8 @@ def _summary_from_existing(
         eval_json.write_text(result.model_dump_json(indent=2))
     if current_branches is not None:
         result = result.for_branches(current_branches)
+    if tests_by_branch is not None:
+        result = result.only_expected({f"{b}/{n}" for b, names in tests_by_branch.items() for n in names})
     filtered = result.without_ignored(ignored)
     return InstanceEvalSummary.from_eval_result(instance_id, filtered)
 
@@ -235,7 +237,12 @@ def _evaluate_instance(
     branch_retries: int = 1,
 ) -> InstanceEvalSummary | None:
     """Evaluate a single instance."""
-    from programbench.utils.load_data import get_active_branches, get_ignored_branches, get_ignored_tests
+    from programbench.utils.load_data import (
+        get_active_branches,
+        get_expected_tests,
+        get_ignored_branches,
+        get_ignored_tests,
+    )
 
     all_test_branches = get_active_branches(instance)
     if not all_test_branches:
@@ -349,7 +356,7 @@ def _evaluate_instance(
         (target_dir / instance_id).mkdir(parents=True, exist_ok=True)
         eval_json.write_text(result.model_dump_json(indent=2))
 
-        filtered = result.without_ignored(ignored)
+        filtered = result.only_expected(get_expected_tests(instance)).without_ignored(ignored)
         return InstanceEvalSummary.from_eval_result(instance_id, filtered)
     except Exception as e:
         log.error("Error evaluating %s: %s", instance_id, e, exc_info=True)

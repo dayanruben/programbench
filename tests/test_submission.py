@@ -9,6 +9,7 @@
 import json
 
 from programbench.submission import recombine_eval_json, split_eval_json
+from programbench.submission import test_results_map as results_map
 
 
 def test_split_recombine_roundtrip_is_lossless(tmp_path):
@@ -51,3 +52,21 @@ def test_split_is_idempotent_and_noop_when_light(tmp_path):
     (d / f"{iid}.eval.json").write_text(json.dumps(light))
     split_eval_json(d, iid)
     assert not (d / f"{iid}.eval.log.json").exists()  # nothing heavy -> no split file written
+
+
+def test_results_map_scores_only_tests_listed_in_tests_json(tmp_path):
+    eval_json = tmp_path / "x.eval.json"
+    eval_json.write_text(
+        json.dumps(
+            {
+                "test_branches": ["b1"],
+                "test_results": [
+                    {"name": "eval.t1", "branch": "b1", "status": "passed", "extra": {}},
+                    {"name": "eval.t2", "branch": "b1", "status": "failure", "extra": {}},
+                    {"name": "tests.agent_written", "branch": "b1", "status": "passed", "extra": {}},
+                ],
+            }
+        )
+    )
+    instance = {"branches": {"b1": {"tests": ["eval.t1", "eval.t2"]}}}
+    assert results_map(eval_json, instance) == {"b1/eval.t1": True, "b1/eval.t2": False}

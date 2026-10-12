@@ -38,6 +38,13 @@ def get_ignored_branches(inst: dict) -> set[str]:
     return {name for name, info in (inst.get("branches") or {}).items() if info.get("ignored")}
 
 
+def get_expected_tests(inst: dict) -> set[str]:
+    """Return ``{branch/test_name}`` for every test listed in tests.json, across all branches."""
+    return {
+        f"{branch}/{name}" for branch, info in (inst.get("branches") or {}).items() for name in info.get("tests") or []
+    }
+
+
 def get_ignored_tests(inst: dict) -> set[str]:
     """Return ``{branch/test_name}`` set for all ignored tests across all branches."""
     result: set[str] = set()

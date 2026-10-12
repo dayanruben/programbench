@@ -24,7 +24,12 @@ from pathlib import Path
 import yaml
 
 from programbench.eval.eval import EvaluationResult
-from programbench.utils.load_data import get_active_branches, get_ignored_tests, load_all_instances
+from programbench.utils.load_data import (
+    get_active_branches,
+    get_expected_tests,
+    get_ignored_tests,
+    load_all_instances,
+)
 
 RESOLVED_THRESHOLD = 1.0
 NEAR_RESOLVED_THRESHOLD = 0.95
@@ -62,7 +67,11 @@ def test_results_map(eval_json: Path, instance: dict) -> dict[str, bool]:
     recompute scores while striking out specific tests (see the registry's ignore map).
     """
     result = EvaluationResult.model_validate_json(eval_json.read_text())
-    result = result.for_branches(get_active_branches(instance)).without_ignored(get_ignored_tests(instance))
+    result = (
+        result.for_branches(get_active_branches(instance))
+        .only_expected(get_expected_tests(instance))
+        .without_ignored(get_ignored_tests(instance))
+    )
     return {t.full_name: t.is_resolved for t in result.test_results}
 
 

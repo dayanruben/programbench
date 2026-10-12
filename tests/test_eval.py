@@ -212,6 +212,19 @@ class TestEvaluationResult:
         assert len(filtered) == 1
         assert filtered.score == 1.0
 
+    def test_only_expected(self):
+        result = EvaluationResult(
+            test_results=[
+                TestResult(name="t1", branch="b1", status="passed", extra={}),
+                TestResult(name="mine", branch="b1", status="passed", extra={}),
+                TestResult(name="t2", branch="b1", status="failure", extra={}),
+            ]
+        )
+        filtered = result.only_expected({"b1/t1", "b1/t2"})
+        assert [t.name for t in filtered] == ["t1", "t2"]
+        assert filtered.score == 0.5
+        assert result.only_expected(set()) is result
+
     def test_for_branches(self):
         result = EvaluationResult(
             test_results=[

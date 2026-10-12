@@ -125,7 +125,12 @@ def info(
 
     from programbench.eval.eval import EvaluationResult
     from programbench.eval.eval_batch import BatchEvalSummary, InstanceEvalSummary
-    from programbench.utils.load_data import get_active_branches, get_ignored_tests, load_all_instances
+    from programbench.utils.load_data import (
+        get_active_branches,
+        get_expected_tests,
+        get_ignored_tests,
+        load_all_instances,
+    )
 
     eval_paths = sorted(run_dir.glob("*/*.eval.json"))
     if not eval_paths:
@@ -142,7 +147,7 @@ def info(
             active = get_active_branches(inst)
             ignored_tests = get_ignored_tests(inst)
             ignored_branches = {b for b in result.test_branches if b not in set(active)}
-            result = result.for_branches(active).without_ignored(ignored_tests)
+            result = result.for_branches(active).only_expected(get_expected_tests(inst)).without_ignored(ignored_tests)
             if ignored_branches:
                 result.warnings = [w for w in result.warnings if not any(f"branch {b}" in w for b in ignored_branches)]
         summaries.append(InstanceEvalSummary.from_eval_result(iid, result))
