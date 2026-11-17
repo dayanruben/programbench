@@ -32,6 +32,10 @@ pip install programbench
 
 For development:
 
+This fork is a validation target. Release workflows may build and check local
+artifacts, but PyPI/Test PyPI uploads and published-package smoke tests run only
+in `facebookresearch/ProgramBench`. Source tests remain available in forks.
+
 ```bash
 git clone https://github.com/facebookresearch/programbench.git
 cd programbench
